@@ -1,11 +1,7 @@
 /**
  * components/LoadingSpinner.jsx
  *
- * Reusable inline loading spinner with an optional label.
- *
- * Props:
- *  label  – string (optional, default "Loading…")
- *  size   – "sm" | "md" | "lg" (default "md")
+ * Bear-inspired loading spinner — warm rust accent.
  */
 
 const SIZE_MAP = {
@@ -20,13 +16,13 @@ export default function LoadingSpinner({ label = 'Loading…', size = 'md' }) {
       <span
         className={[
           SIZE_MAP[size],
-          'rounded-full border-sage/15 border-t-sage animate-spin',
+          'rounded-full border-bear/15 border-t-bear animate-spin',
         ].join(' ')}
         role="status"
         aria-label={label}
       />
       {label && (
-        <p className="text-[0.78rem] text-muted tracking-wide">{label}</p>
+        <p className="text-[0.78rem] text-ink-faint tracking-wide font-medium">{label}</p>
       )}
     </div>
   )

@@ -1,15 +1,7 @@
 /**
  * components/ResultPanel.jsx
  *
- * Renders four analysis cards:
- *   1. Posture Status  (correct / wrong / idle)
- *   2. Detected Pose   name
- *   3. Confidence Bar
- *   4. Joint Feedback  list
- *
- * Props:
- *  result   – PredictionResult | null
- *  loading  – boolean (prediction in-flight)
+ * Bear-inspired result panel — warm white cards, serif headings, rust accent.
  */
 
 import LoadingSpinner from './LoadingSpinner'
@@ -17,10 +9,10 @@ import { IDLE_JOINTS } from '../constants'
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function Card({ title, children }) {
+function Card({ title, children, className = '' }) {
   return (
-    <div className="rounded-2xl border border-sage/10 bg-charcoal-mid p-5">
-      <p className="text-[0.65rem] font-semibold tracking-[0.12em] uppercase text-muted mb-4">
+    <div className={`rounded-xl border border-warm bg-paper-card shadow-card p-5 ${className}`}>
+      <p className="text-[0.64rem] font-semibold tracking-[0.13em] uppercase text-ink-faint mb-4">
         {title}
       </p>
       {children}
@@ -31,25 +23,31 @@ function Card({ title, children }) {
 function PostureStatus({ posture, loading }) {
   const map = {
     correct: {
-      icon:  '✓',
-      label: 'Correct',
-      sub:   'Great form! Keep it up.',
-      orbCls: 'bg-green-posture/10 shadow-[0_0_20px_rgba(90,158,111,0.2)]',
-      textCls: 'text-green-posture',
+      icon:     '✓',
+      label:    'Correct',
+      sub:      'Great form — keep it up!',
+      bg:       'bg-green-50',
+      border:   'border-green-200',
+      iconCls:  'bg-green-100 text-status-ok',
+      textCls:  'text-status-ok',
     },
     wrong: {
-      icon:  '✗',
-      label: 'Needs Fix',
-      sub:   'Check highlighted joints.',
-      orbCls: 'bg-red-posture/10 shadow-[0_0_20px_rgba(212,104,90,0.2)]',
-      textCls: 'text-red-posture',
+      icon:     '✗',
+      label:    'Needs Fix',
+      sub:      'Check the highlighted joints.',
+      bg:       'bg-red-50',
+      border:   'border-red-200',
+      iconCls:  'bg-red-100 text-status-bad',
+      textCls:  'text-status-bad',
     },
     idle: {
-      icon:  '—',
-      label: 'Waiting',
-      sub:   'Start camera to detect.',
-      orbCls: 'bg-white/5',
-      textCls: 'text-muted',
+      icon:     '·',
+      label:    'Waiting',
+      sub:      'Start the camera to begin.',
+      bg:       'bg-paper-mid',
+      border:   'border-warm',
+      iconCls:  'bg-paper-dark text-ink-faint',
+      textCls:  'text-ink-muted',
     },
   }
 
@@ -60,15 +58,15 @@ function PostureStatus({ posture, loading }) {
   }
 
   return (
-    <div className="flex items-center gap-4">
-      <div className={`w-14 h-14 rounded-full flex items-center justify-center text-xl shrink-0 ${cfg.orbCls}`}>
+    <div className={`flex items-center gap-4 rounded-lg border px-4 py-3 ${cfg.bg} ${cfg.border}`}>
+      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ${cfg.iconCls}`}>
         {cfg.icon}
       </div>
       <div>
-        <p className={`font-display text-[1.5rem] font-extrabold leading-none ${cfg.textCls}`}>
+        <p className={`font-display text-[1.45rem] font-bold leading-none ${cfg.textCls}`}>
           {cfg.label}
         </p>
-        <p className="text-[0.78rem] text-muted mt-1">{cfg.sub}</p>
+        <p className="text-[0.78rem] text-ink-muted mt-1">{cfg.sub}</p>
       </div>
     </div>
   )
@@ -76,15 +74,21 @@ function PostureStatus({ posture, loading }) {
 
 function ConfidenceBar({ value }) {
   const pct = Math.round((value ?? 0) * 100)
+  const color = pct >= 75 ? 'bg-status-ok' : pct >= 50 ? 'bg-bear' : 'bg-status-bad'
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-[0.78rem] text-muted">Model certainty</span>
-        <span className="font-display font-bold text-sage-light">{pct}%</span>
+        <span className="text-[0.78rem] text-ink-muted">Model certainty</span>
+        <span className={`font-display font-bold text-[1rem] ${
+          pct >= 75 ? 'text-status-ok' : pct >= 50 ? 'text-bear' : 'text-status-bad'
+        }`}>
+          {pct}%
+        </span>
       </div>
-      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+      <div className="h-2 rounded-full bg-paper-mid overflow-hidden">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-sage-dark to-sage-light conf-fill-transition"
+          className={`h-full rounded-full conf-fill-transition ${color}`}
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -92,24 +96,23 @@ function ConfidenceBar({ value }) {
   )
 }
 
-const JOINT_STATUS = {
-  ok:   { dot: 'bg-green-posture', label: 'text-off-white' },
-  fix:  { dot: 'bg-red-posture',   label: 'text-off-white' },
-  idle: { dot: 'bg-muted opacity-40', label: 'text-muted'  },
-}
-
 function JointRow({ name, status, feedback }) {
-  const cfg = JOINT_STATUS[status] ?? JOINT_STATUS.idle
+  const cfg = {
+    ok:   { dot: 'bg-status-ok',  text: 'text-ink',       fb: 'text-status-ok' },
+    fix:  { dot: 'bg-status-bad', text: 'text-ink',       fb: 'text-status-bad' },
+    idle: { dot: 'bg-warm',       text: 'text-ink-faint', fb: 'text-ink-faint' },
+  }[status] ?? { dot: 'bg-warm', text: 'text-ink-faint', fb: 'text-ink-faint' }
+
   return (
-    <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-white/[0.03]">
+    <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg bg-paper border border-warm/60">
       <span className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot}`} />
-      <span className={`text-[0.82rem] font-medium flex-1 ${cfg.label}`}>{name}</span>
-      <span className="text-[0.73rem] text-muted italic">{feedback}</span>
+      <span className={`text-[0.82rem] font-medium flex-1 ${cfg.text}`}>{name}</span>
+      <span className={`text-[0.73rem] italic ${cfg.fb}`}>{feedback}</span>
     </div>
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Main ─────────────────────────────────────────────────────────────────────
 
 export default function ResultPanel({ result, loading }) {
   const posture  = result?.posture_status ?? 'idle'
@@ -127,11 +130,11 @@ export default function ResultPanel({ result, loading }) {
       {/* 2. Detected pose */}
       <Card title="Detected Pose">
         {poseName ? (
-          <p className="font-display text-[1.8rem] font-extrabold tracking-tight leading-none">
+          <p className="font-display text-[1.9rem] font-bold tracking-tight text-ink leading-none">
             {poseName}
           </p>
         ) : (
-          <p className="text-muted text-[0.9rem]">No pose detected yet</p>
+          <p className="text-ink-muted text-[0.9rem] italic">No pose detected yet</p>
         )}
       </Card>
 
@@ -142,7 +145,7 @@ export default function ResultPanel({ result, loading }) {
 
       {/* 4. Joint feedback */}
       <Card title="Joint Feedback">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           {joints.map((joint, i) => (
             <JointRow key={i} {...joint} />
           ))}

@@ -4,29 +4,40 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ['Syne', 'sans-serif'],
-        body: ['DM Sans', 'sans-serif'],
+        display: ['Lora', 'Georgia', 'serif'],
+        body:    ['DM Sans', 'sans-serif'],
       },
       colors: {
-        sage: {
-          DEFAULT: '#6b9e78',
-          light:   '#a8c5b0',
-          dark:    '#3d6647',
+        // Bear-inspired rust / red accent
+        bear: {
+          DEFAULT: '#C8432A',
+          light:   '#E06B50',
+          dark:    '#9A3120',
+          pale:    '#F9EDE9',
         },
-        earth: {
-          DEFAULT: '#c4a882',
-          light:   '#e8d9c4',
+        // Warm cream / parchment surfaces
+        paper: {
+          DEFAULT: '#FAF7F2',
+          mid:     '#F3EDE3',
+          dark:    '#E9E0D1',
+          card:    '#FFFFFF',
         },
-        charcoal: {
-          DEFAULT: '#1c1f1e',
-          mid:     '#2a2e2c',
-          soft:    '#363b38',
+        // Typography
+        ink: {
+          DEFAULT: '#1C1917',
+          muted:   '#78716C',
+          faint:   '#A8A29E',
         },
-        'off-white': '#f4f1eb',
-        'warm-white': '#faf8f4',
-        muted: '#8a9490',
-        'red-posture':   '#d4685a',
-        'green-posture': '#5a9e6f',
+        // Borders / dividers
+        warm: '#DED5C7',
+        // Status
+        'status-ok':  '#2D7A4E',
+        'status-bad': '#B83228',
+      },
+      boxShadow: {
+        card:  '0 1px 4px rgba(28,25,23,0.06), 0 4px 16px rgba(28,25,23,0.04)',
+        lift:  '0 4px 20px rgba(28,25,23,0.10), 0 1px 6px rgba(28,25,23,0.06)',
+        bear:  '0 4px 16px rgba(200,67,42,0.22)',
       },
       keyframes: {
         pulse: {
@@ -37,15 +48,20 @@ export default {
           to: { transform: 'rotate(360deg)' },
         },
         fadeUp: {
-          from: { opacity: '0', transform: 'translateY(16px)' },
+          from: { opacity: '0', transform: 'translateY(14px)' },
           to:   { opacity: '1', transform: 'translateY(0)' },
+        },
+        shimmer: {
+          '0%':   { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
         },
       },
       animation: {
-        pulse:   'pulse 2s infinite',
-        spin:    'spin 0.8s linear infinite',
+        pulse:       'pulse 2s infinite',
+        spin:        'spin 0.75s linear infinite',
         'spin-slow': 'spin 20s linear infinite',
-        'fade-up': 'fadeUp 0.5s ease forwards',
+        'fade-up':   'fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) forwards',
+        shimmer:     'shimmer 2.2s ease infinite',
       },
     },
   },
