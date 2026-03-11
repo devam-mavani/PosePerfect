@@ -1,7 +1,7 @@
 /**
  * pages/LiveDetection.jsx
  *
- * Bear-inspired detection view — warm, clean, focused layout.
+ * Lavender + white detection view.
  */
 
 import WebcamFeed  from '../components/WebcamFeed'
@@ -25,14 +25,15 @@ export default function LiveDetection() {
       <div className="max-w-[1280px] mx-auto px-8 py-10">
 
         {/* Page header */}
-        <div className="mb-8 pb-6 border-b border-warm">
-          <p className="text-[0.68rem] font-semibold tracking-[0.13em] uppercase text-bear mb-2">
+        <div className="mb-8 pb-7 border-b border-edge">
+          <span className="inline-block bg-lavender-pale border border-lavender-soft rounded-full
+                           px-3.5 py-1 text-[0.68rem] font-semibold tracking-[0.1em] uppercase text-lavender mb-3">
             Real-Time Analysis
-          </p>
-          <h1 className="font-display text-[1.9rem] font-bold tracking-tight text-ink mb-1.5">
+          </span>
+          <h1 className="font-display text-[1.9rem] font-extrabold tracking-tight text-ink mb-2">
             Live Pose Detection
           </h1>
-          <p className="text-ink-muted text-[0.88rem] max-w-[540px] leading-[1.7]">
+          <p className="text-ink-muted text-[0.88rem] max-w-[520px] leading-[1.72]">
             Position yourself in frame and hold a yoga pose.
             PosePerfect analyses your form every 1.5 s — adjust in real time.
           </p>
@@ -51,22 +52,23 @@ export default function LiveDetection() {
               onStop={stopCamera}
             />
 
-            {/* Error / API hint */}
             {error ? (
-              <div className="px-4 py-3 rounded-lg border border-red-200 bg-red-50 text-[0.83rem] text-status-bad">
+              <div className="px-4 py-3 rounded-xl border border-red-200 bg-red-50
+                              text-[0.83rem] text-status-bad">
                 {error}
               </div>
             ) : (
               <p className="text-[0.76rem] text-ink-faint leading-relaxed">
                 Frames are sent to{' '}
-                <code className="bg-paper-mid border border-warm px-1.5 py-0.5 rounded text-bear text-[0.74rem]">
+                <code className="bg-lavender-pale border border-lavender-soft px-1.5 py-0.5
+                                 rounded text-lavender text-[0.74rem]">
                   http://localhost:8000/predict
                 </code>{' '}
-                — make sure your backend is running. Override via the{' '}
-                <code className="bg-paper-mid border border-warm px-1.5 py-0.5 rounded text-bear text-[0.74rem]">
+                — make sure your backend is running. Override via{' '}
+                <code className="bg-lavender-pale border border-lavender-soft px-1.5 py-0.5
+                                 rounded text-lavender text-[0.74rem]">
                   VITE_API_URL
-                </code>{' '}
-                environment variable.
+                </code>.
               </p>
             )}
           </section>
@@ -75,6 +77,7 @@ export default function LiveDetection() {
           <section>
             <ResultPanel result={result} loading={loading} />
           </section>
+
         </div>
       </div>
     </main>

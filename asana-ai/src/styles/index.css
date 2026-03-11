@@ -4,75 +4,86 @@
 
 @layer base {
   :root {
-    /* Bear palette */
-    --bear:          #C8432A;
-    --bear-light:    #E06B50;
-    --bear-dark:     #9A3120;
-    --bear-pale:     #F9EDE9;
+    /* Lavender accent */
+    --lavender:       #7C6FCD;
+    --lavender-light: #A89FDE;
+    --lavender-dark:  #5B4FB5;
+    --lavender-pale:  #F0EEFB;
+    --lavender-soft:  #E2DEFF;
 
-    /* Warm surfaces */
-    --paper:         #FAF7F2;
-    --paper-mid:     #F3EDE3;
-    --paper-dark:    #E9E0D1;
-    --paper-card:    #FFFFFF;
+    /* White surfaces */
+    --surface:        #FAFAFE;
+    --surface-mid:    #F3F1FC;
+    --surface-dark:   #E8E5F8;
+    --surface-card:   #FFFFFF;
 
     /* Typography */
-    --ink:           #1C1917;
-    --ink-muted:     #78716C;
-    --ink-faint:     #A8A29E;
+    --ink:            #1E1B2E;
+    --ink-muted:      #6B6589;
+    --ink-faint:      #A09BBF;
 
     /* Borders */
-    --warm:          #DED5C7;
+    --edge:           #E2DEFF;
 
     /* Status */
-    --status-ok:     #2D7A4E;
-    --status-bad:    #B83228;
+    --status-ok:      #2D7A4E;
+    --status-bad:     #B83228;
   }
 
-  html {
-    scroll-behavior: smooth;
-  }
+  html { scroll-behavior: smooth; }
 
   body {
-    @apply font-body bg-paper text-ink min-h-screen antialiased;
-    /* Subtle warm paper grain texture */
-    background-image:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+    @apply font-body bg-surface text-ink min-h-screen antialiased;
+    background-image: radial-gradient(
+      ellipse 80% 60% at 50% -10%,
+      rgba(124, 111, 205, 0.08) 0%,
+      transparent 70%
+    );
+    background-attachment: fixed;
   }
 
   * { @apply box-border; }
-
   h1, h2, h3, h4 { @apply font-display; }
 }
 
-/* ── Scrollbar ── */
 @layer utilities {
+  /* Scrollbar */
   ::-webkit-scrollbar        { width: 5px; }
-  ::-webkit-scrollbar-track  { background: var(--paper-mid); }
-  ::-webkit-scrollbar-thumb  { background: var(--warm); border-radius: 100px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--ink-faint); }
+  ::-webkit-scrollbar-track  { background: var(--surface-mid); }
+  ::-webkit-scrollbar-thumb  { background: var(--lavender-soft); border-radius: 100px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--lavender-light); }
 
-  /* Confidence bar */
+  /* Confidence bar animation */
   .conf-fill-transition {
     transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Soft card lift on hover */
+  /* Card hover lift */
   .card-hover {
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    transition: box-shadow 0.22s ease, transform 0.22s ease;
   }
   .card-hover:hover {
-    box-shadow: 0 4px 20px rgba(28,25,23,0.10), 0 1px 6px rgba(28,25,23,0.06);
-    transform: translateY(-1px);
+    box-shadow: 0 4px 24px rgba(124,111,205,0.14), 0 1px 6px rgba(124,111,205,0.08);
+    transform: translateY(-2px);
   }
 
-  /* Decorative dot pulse (recording indicator) */
+  /* Live indicator pulse */
   .rec-dot {
     animation: pulse 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
-  /* Warm divider line */
-  .warm-divider {
-    border-color: var(--warm);
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, #7C6FCD 0%, #A89FDE 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Glass card effect */
+  .glass {
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 }

@@ -1,7 +1,7 @@
 /**
  * components/LoadingSpinner.jsx
  *
- * Bear-inspired loading spinner — warm rust accent.
+ * Lavender-accented loading spinner.
  */
 
 const SIZE_MAP = {
@@ -16,7 +16,7 @@ export default function LoadingSpinner({ label = 'Loading…', size = 'md' }) {
       <span
         className={[
           SIZE_MAP[size],
-          'rounded-full border-bear/15 border-t-bear animate-spin',
+          'rounded-full border-lavender-soft border-t-lavender animate-spin',
         ].join(' ')}
         role="status"
         aria-label={label}

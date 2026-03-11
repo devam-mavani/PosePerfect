@@ -1,15 +1,18 @@
 /**
  * pages/About.jsx
  *
- * Bear-inspired — editorial layout, warm surfaces, serif section headers.
+ * Lavender + white About page — clean cards, lavender section accents.
  */
 
 import { SUPPORTED_POSES, TECH_STACK, TEAM } from '../constants'
 
 function Section({ title, children }) {
   return (
-    <section className="mb-12 pb-12 border-b border-warm last:border-0 last:mb-0 last:pb-0">
-      <h2 className="font-display text-[1.1rem] font-semibold text-bear mb-5">{title}</h2>
+    <section className="mb-10">
+      <div className="flex items-center gap-3 mb-5">
+        <span className="w-1 h-5 rounded-full bg-lavender inline-block shrink-0" />
+        <h2 className="font-display text-[1.1rem] font-bold text-ink">{title}</h2>
+      </div>
       {children}
     </section>
   )
@@ -21,13 +24,15 @@ export default function About() {
       <div className="max-w-[820px] mx-auto px-8 py-14 pb-24">
 
         {/* Header */}
-        <span className="inline-block bg-bear-pale border border-bear/20 rounded-full px-3.5 py-1.5 text-[0.7rem] font-semibold tracking-[0.1em] uppercase text-bear mb-6">
+        <span className="inline-block bg-lavender-pale border border-lavender-soft rounded-full
+                         px-3.5 py-1.5 text-[0.7rem] font-semibold tracking-[0.1em] uppercase text-lavender mb-6">
           About the Project
         </span>
 
-        <h1 className="font-display text-[clamp(2.2rem,4vw,3rem)] font-bold tracking-tight leading-[1.15] text-ink mb-5">
+        <h1 className="font-display text-[clamp(2.2rem,4vw,3rem)] font-extrabold tracking-tight
+                       leading-[1.15] text-ink mb-5">
           Built for mindful<br />
-          <em className="not-italic text-bear">movement.</em>
+          <span className="gradient-text">movement.</span>
         </h1>
 
         <p className="text-ink-muted text-[1.05rem] font-light leading-[1.85] mb-14 max-w-[600px]">
@@ -38,30 +43,35 @@ export default function About() {
 
         {/* ── How it works ── */}
         <Section title="How It Works">
-          <p className="text-ink-muted text-[0.93rem] leading-[1.82]">
-            Your webcam feed is captured entirely client-side. A JPEG frame is extracted
-            every 1.5 seconds and forwarded to a FastAPI backend running MediaPipe Pose
-            for landmark extraction, plus a trained SVM classifier for pose recognition.
-            The backend returns the predicted pose name, a posture verdict, a confidence
-            score, and per-joint correction feedback — all rendered instantly in the
-            browser with zero page reloads.
-          </p>
+          <div className="bg-white border border-edge rounded-2xl p-6 shadow-card">
+            <p className="text-ink-muted text-[0.93rem] leading-[1.82]">
+              Your webcam feed is captured entirely client-side. A JPEG frame is extracted
+              every 1.5 seconds and forwarded to a FastAPI backend running MediaPipe Pose
+              for landmark extraction, plus a trained SVM classifier for pose recognition.
+              The backend returns the predicted pose name, a posture verdict, a confidence
+              score, and per-joint correction feedback — all rendered instantly in the
+              browser with zero page reloads.
+            </p>
+          </div>
         </Section>
 
         {/* ── API contract ── */}
         <Section title="API Contract">
           <p className="text-ink-muted text-[0.88rem] mb-4 leading-[1.78]">
             The frontend posts a{' '}
-            <code className="bg-paper-mid border border-warm px-1.5 py-0.5 rounded text-bear text-[0.82rem]">
+            <code className="bg-lavender-pale border border-lavender-soft px-1.5 py-0.5
+                             rounded text-lavender text-[0.82rem]">
               multipart/form-data
             </code>{' '}
             frame to{' '}
-            <code className="bg-paper-mid border border-warm px-1.5 py-0.5 rounded text-bear text-[0.82rem]">
+            <code className="bg-lavender-pale border border-lavender-soft px-1.5 py-0.5
+                             rounded text-lavender text-[0.82rem]">
               POST /predict
             </code>
             . Your backend should return JSON in this shape:
           </p>
-          <pre className="bg-paper-card border border-warm rounded-xl p-6 text-[0.78rem] text-bear overflow-x-auto leading-[1.78] shadow-card font-mono">
+          <pre className="bg-white border border-edge rounded-2xl p-6 text-[0.78rem] text-lavender-dark
+                          overflow-x-auto leading-[1.78] shadow-card font-mono">
 {`{
   "pose":           "Warrior II",
   "confidence":     0.94,
@@ -80,9 +90,10 @@ export default function About() {
             {SUPPORTED_POSES.map((pose) => (
               <div
                 key={pose}
-                className="flex items-center gap-3 bg-paper-card border border-warm rounded-lg px-4 py-3 shadow-card"
+                className="flex items-center gap-3 bg-white border border-edge rounded-xl
+                           px-4 py-3 shadow-card card-hover"
               >
-                <span className="w-2 h-2 rounded-full bg-bear shrink-0" />
+                <span className="w-2.5 h-2.5 rounded-full bg-lavender shrink-0" />
                 <span className="text-[0.875rem] font-medium text-ink">{pose}</span>
               </div>
             ))}
@@ -95,7 +106,8 @@ export default function About() {
             {TECH_STACK.map((tech) => (
               <span
                 key={tech}
-                className="bg-bear-pale border border-bear/20 rounded-full px-4 py-1.5 text-[0.8rem] font-semibold text-bear"
+                className="bg-lavender-pale border border-lavender-soft rounded-full
+                           px-4 py-1.5 text-[0.8rem] font-semibold text-lavender"
               >
                 {tech}
               </span>
@@ -105,7 +117,8 @@ export default function About() {
 
         {/* ── Architecture ── */}
         <Section title="Project Architecture">
-          <pre className="bg-paper-card border border-warm rounded-xl p-6 text-[0.78rem] text-ink-muted overflow-x-auto leading-[1.85] shadow-card font-mono">
+          <pre className="bg-white border border-edge rounded-2xl p-6 text-[0.78rem] text-ink-muted
+                          overflow-x-auto leading-[1.85] shadow-card font-mono">
 {`src/
 ├── components/
 │   ├── Navbar.jsx          # Fixed top navigation
@@ -133,10 +146,13 @@ export default function About() {
             {TEAM.map(({ avatar, name, role }) => (
               <div
                 key={name}
-                className="bg-paper-card border border-warm rounded-xl p-6 text-center shadow-card card-hover"
+                className="bg-white border border-edge rounded-2xl p-6 text-center shadow-card card-hover"
               >
-                <div className="text-[2.5rem] mb-3">{avatar}</div>
-                <p className="font-display font-semibold text-[0.95rem] text-ink">{name}</p>
+                <div className="w-14 h-14 rounded-2xl bg-lavender-pale flex items-center
+                                justify-center mx-auto mb-4 text-[2rem]">
+                  {avatar}
+                </div>
+                <p className="font-display font-bold text-[0.95rem] text-ink">{name}</p>
                 <p className="text-ink-muted text-[0.78rem] mt-1">{role}</p>
               </div>
             ))}

@@ -4,56 +4,58 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ['Lora', 'Georgia', 'serif'],
+        display: ['Plus Jakarta Sans', 'sans-serif'],
         body:    ['DM Sans', 'sans-serif'],
       },
       colors: {
-        // Bear-inspired rust / red accent
-        bear: {
-          DEFAULT: '#C8432A',
-          light:   '#E06B50',
-          dark:    '#9A3120',
-          pale:    '#F9EDE9',
+        // Lavender accent scale
+        lavender: {
+          DEFAULT: '#7C6FCD',
+          light:   '#A89FDE',
+          dark:    '#5B4FB5',
+          pale:    '#F0EEFB',
+          soft:    '#E2DEFF',
         },
-        // Warm cream / parchment surfaces
-        paper: {
-          DEFAULT: '#FAF7F2',
-          mid:     '#F3EDE3',
-          dark:    '#E9E0D1',
+        // White / near-white surfaces
+        surface: {
+          DEFAULT: '#FAFAFE',
+          mid:     '#F3F1FC',
+          dark:    '#E8E5F8',
           card:    '#FFFFFF',
         },
-        // Typography
+        // Typography — deep purple-tinted neutrals
         ink: {
-          DEFAULT: '#1C1917',
-          muted:   '#78716C',
-          faint:   '#A8A29E',
+          DEFAULT: '#1E1B2E',
+          muted:   '#6B6589',
+          faint:   '#A09BBF',
         },
-        // Borders / dividers
-        warm: '#DED5C7',
+        // Borders
+        edge: '#E2DEFF',
         // Status
         'status-ok':  '#2D7A4E',
         'status-bad': '#B83228',
       },
       boxShadow: {
-        card:  '0 1px 4px rgba(28,25,23,0.06), 0 4px 16px rgba(28,25,23,0.04)',
-        lift:  '0 4px 20px rgba(28,25,23,0.10), 0 1px 6px rgba(28,25,23,0.06)',
-        bear:  '0 4px 16px rgba(200,67,42,0.22)',
+        card:     '0 1px 4px rgba(100,82,204,0.06), 0 4px 16px rgba(100,82,204,0.05)',
+        lift:     '0 4px 24px rgba(100,82,204,0.14), 0 1px 6px rgba(100,82,204,0.08)',
+        lavender: '0 4px 20px rgba(124,111,205,0.30)',
+        glow:     '0 0 0 3px rgba(124,111,205,0.18)',
       },
       keyframes: {
         pulse: {
-          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
-          '50%':       { opacity: '0.5', transform: 'scale(1.3)' },
+          '0%, 100%': { opacity: '1',   transform: 'scale(1)'   },
+          '50%':      { opacity: '0.5', transform: 'scale(1.3)' },
         },
         spin: {
           to: { transform: 'rotate(360deg)' },
         },
         fadeUp: {
           from: { opacity: '0', transform: 'translateY(14px)' },
-          to:   { opacity: '1', transform: 'translateY(0)' },
+          to:   { opacity: '1', transform: 'translateY(0)'    },
         },
-        shimmer: {
-          '0%':   { backgroundPosition: '-200% 0' },
-          '100%': { backgroundPosition: '200% 0' },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)'  },
+          '50%':      { transform: 'translateY(-8px)' },
         },
       },
       animation: {
@@ -61,7 +63,7 @@ export default {
         spin:        'spin 0.75s linear infinite',
         'spin-slow': 'spin 20s linear infinite',
         'fade-up':   'fadeUp 0.55s cubic-bezier(0.22,1,0.36,1) forwards',
-        shimmer:     'shimmer 2.2s ease infinite',
+        float:       'float 4s ease-in-out infinite',
       },
     },
   },
