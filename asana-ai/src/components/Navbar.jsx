@@ -1,9 +1,8 @@
 /**
  * components/Navbar.jsx
  *
- * Lavender + white navbar with auth state:
- *  - Logged out → "Log In" + "Sign Up" buttons
- *  - Logged in  → profile avatar with dropdown (View Profile, Log Out)
+ * Lavender + white navbar with auth state.
+ * Logo image loaded from /public/logo.png
  */
 
 import { useState, useRef, useEffect } from 'react'
@@ -20,7 +19,6 @@ function ProfileDropdown({ userProfile, photoURL, onClose, onLogout }) {
   const navigate = useNavigate()
   const ref      = useRef(null)
 
-  // Close on outside click
   useEffect(() => {
     function handler(e) {
       if (ref.current && !ref.current.contains(e.target)) onClose()
@@ -108,12 +106,16 @@ export default function Navbar() {
     <header className="fixed top-0 inset-x-0 z-50 glass border-b border-edge">
       <div className="max-w-[1200px] mx-auto flex items-center justify-between px-8 py-4">
 
-        {/* Logo */}
+        {/* ── Logo ── */}
         <NavLink to="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-xl bg-lavender flex items-center justify-center
-                          shadow-lavender transition-transform duration-300
+          <div className="w-8 h-8 rounded-xl overflow-hidden shadow-lavender shrink-0
+                          transition-transform duration-300
                           group-hover:rotate-[-8deg] group-hover:scale-110">
-            <span className="text-white text-[0.85rem]">🧘</span>
+            <img
+              src="/logo.png"
+              alt="PosePerfect logo"
+              className="w-full h-full object-cover"
+            />
           </div>
           <span className="font-display text-[1.15rem] font-bold text-ink tracking-tight">
             Pose<span className="gradient-text">Perfect</span>
@@ -147,7 +149,6 @@ export default function Navbar() {
         {/* Auth section */}
         <div className="flex items-center gap-3">
           {currentUser ? (
-            /* ── Profile avatar + dropdown ── */
             <div className="relative">
               <button
                 onClick={() => setOpen((o) => !o)}
@@ -182,7 +183,6 @@ export default function Navbar() {
               )}
             </div>
           ) : (
-            /* ── Login / Sign Up buttons ── */
             <>
               <button
                 onClick={() => navigate('/login')}
