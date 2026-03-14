@@ -1,21 +1,20 @@
 /**
  * App.jsx
  *
- * Root component. Wires up React Router and wraps all pages in the
- * shared Navbar. The router is created in main.jsx using
- * createBrowserRouter so this file stays lean.
+ * Root component. Wraps everything in AuthProvider and renders
+ * the shared Navbar above all pages via <Outlet />.
  */
 
 import { Outlet, ScrollRestoration } from 'react-router-dom'
 import Navbar from './components/Navbar'
+import { AuthProvider } from './contexts/AuthContext'
 
 export default function App() {
   return (
-    <>
+    <AuthProvider>
       <ScrollRestoration />
       <Navbar />
-      {/* Pages render here via <Outlet /> */}
       <Outlet />
-    </>
+    </AuthProvider>
   )
 }
