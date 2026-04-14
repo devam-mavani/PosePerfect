@@ -166,11 +166,36 @@ export function useScheduleSession({ speak, onAsanaComplete }) {
     advanceRef.current(true)
   }, [currentAsanaIndex, speak])
 
+  // ── Ref for wrong-asana speech debounce (separate from correction debounce) ──
+  const lastWrongAsanaSpeakRef = useRef(0)
+
   // ── Process prediction ────────────────────────────────────────────────────
   const onNewResult = useCallback((result) => {
     if (phaseRef.current !== 'perform') return
 
-    const slug = asanasRef.current[currentAsanaIndex]
+    const slug         = asanasRef.current[currentAsanaIndex]
+    const expectedName = getAsanaDisplayName(slug)
+
+    // ── Wrong-asana guard ─────────────────────────────────────────────────
+    // If a different (confident) pose is detected, warn the user via voice
+    // and skip accuracy tracking — don't penalise the current asana's score.
+    if (
+      result.pose &&
+      result.posture_status !== 'unknown' &&
+      result.pose !== 'Unknown Pose' &&
+      result.pose.toLowerCase() !== expectedName.toLowerCase()
+    ) {
+      const now = Date.now()
+      if (now - lastWrongAsanaSpeakRef.current > 5000) {
+        lastWrongAsanaSpeakRef.current = now
+        speak(
+          `You are performing a different asana. Please switch to ${expectedName}.`,
+          true,  // priority — interrupts any ongoing speech
+        )
+      }
+      return  // do NOT count this frame in accuracy
+    }
+
     if (!accuracyRef.current[slug]) {
       accuracyRef.current[slug] = { correct: 0, total: 0 }
     }
