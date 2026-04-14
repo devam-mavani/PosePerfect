@@ -1,0 +1,33 @@
+# PosePerfect Backend — pinned versions for stable Render deploys
+
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.9
+python-dotenv==1.0.1
+
+# Async HTTP (used in scheduler + notifications)
+httpx==0.27.2
+
+# Scheduler (APScheduler for daily reminders)
+apscheduler==3.10.4
+
+# CV / Pose
+# NOTE: use opencv-python-headless on servers (no GUI/display required)
+opencv-python-headless==4.10.0.84
+mediapipe==0.10.14
+
+# Data / ML
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.4.1.post1
+pillow==10.4.0
+joblib==1.4.2
+
+# NOTE: tensorflow has been removed — it was never used in app.py and caused
+# build timeouts (~600 MB install) on Render's free tier.
+
+# Firebase + email (only needed if scheduler/email reporting is active)
+# Uncomment these if you are using the daily reminder scheduler with Firestore:
+# firebase-admin==6.5.0
+# sendgrid==6.11.0
