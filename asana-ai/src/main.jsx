@@ -21,6 +21,7 @@ import SessionPlayer   from './pages/SessionPlayer'
 import Admin           from './pages/Admin'
 import ProtectedRoute  from './components/ProtectedRoute'
 import AdminRoute      from './components/AdminRoute'
+import PublicOnlyRoute from './components/PublicOnlyRoute'
 
 import './styles/index.css'
 
@@ -31,8 +32,8 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Home /> },
       { path: 'about',  element: <About /> },
-      { path: 'login',  element: <Login /> },
-      { path: 'signup', element: <SignUp /> },
+      { path: 'login',  element: <PublicOnlyRoute><Login /></PublicOnlyRoute> },
+      { path: 'signup', element: <PublicOnlyRoute><SignUp /></PublicOnlyRoute> },
       {
         path: 'detection',
         element: <ProtectedRoute><LiveDetection /></ProtectedRoute>,

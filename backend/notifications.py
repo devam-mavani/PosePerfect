@@ -43,7 +43,8 @@ SMTP_PASS      = os.getenv("SMTP_PASS",      "")
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "PosePerfect")
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_API       = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
+# NOTE: Do NOT build TELEGRAM_API here at module load time —
+# the token may not be in the environment yet. Built lazily inside send_telegram().
 
 # ── Duolingo-style skip messages ──────────────────────────────────────────────
 SKIP_MESSAGES = [
@@ -194,48 +195,86 @@ def _scorecard_html(data: dict) -> str:
 
 
 # ── Email ─────────────────────────────────────────────────────────────────────
-def send_email(to: str, subject: str, html_body: str) -> bool:
-    """Send an HTML email. Returns True on success, False on failure."""
+def _send_email_sync(to: str, subject: str, html_body: str) -> bool:
+    """
+    Blocking SMTP send — call via asyncio.to_thread() from async contexts.
+    Tries STARTTLS on port 587 first; falls back to SSL on port 465 if the
+    env var SMTP_PORT is 465.
+    """
     if not SMTP_USER or not SMTP_PASS:
         log.warning(
-            "Email NOT sent to %s — SMTP_USER/SMTP_PASS are not set in .env. "
-            "Add your Gmail credentials to backend/.env to enable email notifications.",
+            "Email NOT sent to %s — SMTP_USER/SMTP_PASS are not set. "
+            "Add your Gmail App Password to backend/.env  "
+            "(Google Account → Security → 2-Step Verification → App passwords).",
             to,
         )
         return False
-    try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"]    = f"{SMTP_FROM_NAME} <{SMTP_USER}>"
-        msg["To"]      = to
-        msg.attach(MIMEText(html_body, "html"))
 
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(SMTP_USER, SMTP_PASS)
-            server.sendmail(SMTP_USER, to, msg.as_string())
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"]    = f"{SMTP_FROM_NAME} <{SMTP_USER}>"
+    msg["To"]      = to
+    msg.attach(MIMEText(html_body, "html"))
+
+    timeout = 10  # seconds — prevents silent hang on Render
+
+    try:
+        if SMTP_PORT == 465:
+            # SSL from the start (some providers require this)
+            import ssl as _ssl
+            ctx = _ssl.create_default_context()
+            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=timeout, context=ctx) as server:
+                server.login(SMTP_USER, SMTP_PASS)
+                server.sendmail(SMTP_USER, to, msg.as_string())
+        else:
+            # Standard STARTTLS on port 587 (Gmail default)
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=timeout) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(SMTP_USER, SMTP_PASS)
+                server.sendmail(SMTP_USER, to, msg.as_string())
 
         log.info("Email sent to %s — subject: %s", to, subject)
         return True
+
     except smtplib.SMTPAuthenticationError:
         log.error(
-            "Email SMTP authentication failed for %s — "
-            "check that SMTP_PASS is a Gmail App Password, not your regular password. "
-            "Generate one at: Google Account → Security → 2-Step Verification → App passwords",
-            to,
+            "SMTP authentication failed for %s — "
+            "SMTP_PASS must be a Gmail App Password (16 chars, no spaces), "
+            "NOT your regular Gmail password. "
+            "Generate one at: Google Account → Security → 2-Step Verification → App passwords. "
+            "Also make sure 2-Step Verification is ON for %s.",
+            to, SMTP_USER,
         )
         return False
+    except smtplib.SMTPRecipientsRefused:
+        log.error("SMTP rejected recipient address: %s", to)
+        return False
+    except (TimeoutError, smtplib.SMTPConnectError, OSError) as e:
+        log.error("SMTP connection failed (host=%s port=%d): %s", SMTP_HOST, SMTP_PORT, e)
+        return False
     except smtplib.SMTPException as e:
-        log.error("Email SMTP error for %s: %s", to, e)
+        log.error("SMTP error sending to %s: %s", to, e)
         return False
     except Exception as e:
-        log.error("Email unexpected error for %s: %s", to, e)
+        log.error("Unexpected email error for %s: %s", to, e)
         return False
 
 
-def send_session_email(to: str, data: dict) -> bool:
+def send_email(to: str, subject: str, html_body: str) -> bool:
+    """Synchronous wrapper — kept for direct (non-async) callers."""
+    return _send_email_sync(to, subject, html_body)
+
+
+async def send_email_async(to: str, subject: str, html_body: str) -> bool:
+    """Async-safe wrapper — runs SMTP in a thread so the event loop never blocks."""
+    import asyncio
+    return await asyncio.to_thread(_send_email_sync, to, subject, html_body)
+
+
+
+async def send_session_email(to: str, data: dict) -> bool:
     name    = data.get("userName", "Yogi")
     status  = data.get("status", "completed")
     subject = (
@@ -243,10 +282,10 @@ def send_session_email(to: str, data: dict) -> bool:
         if status == "completed"
         else f"⏸ {name}, your PosePerfect session was paused"
     )
-    return send_email(to, subject, _scorecard_html(data))
+    return await send_email_async(to, subject, _scorecard_html(data))
 
 
-def send_skip_reminder_email(to: str, name: str, data: dict) -> bool:
+async def send_skip_reminder_email(to: str, name: str, data: dict) -> bool:
     import random
     msg_template = random.choice(SKIP_MESSAGES)
     msg = msg_template.format(
@@ -285,7 +324,7 @@ def send_skip_reminder_email(to: str, name: str, data: dict) -> bool:
   </table>
 </body></html>"""
 
-    return send_email(to, f"🧘 {name}, don't break your streak today!", html)
+    return await send_email_async(to, f"🧘 {name}, don't break your streak today!", html)
 
 
 # ── Admin custom message ──────────────────────────────────────────────────────
@@ -332,31 +371,82 @@ async def send_admin_telegram(chat_id: str, name: str, message: str) -> bool:
 # ── Telegram ──────────────────────────────────────────────────────────────────
 async def send_telegram(chat_id: str, text: str, parse_mode: str = "HTML") -> bool:
     """Send a Telegram message. Returns True on success."""
-    if not TELEGRAM_BOT_TOKEN:
+    # Guard: empty string is falsy in Python but some callers may pass ""
+    if not chat_id or not chat_id.strip():
+        log.warning("Telegram skipped — chat_id is empty or None.")
+        return False
+
+    # Lazily resolve the token so we always get the live env var value
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "") or TELEGRAM_BOT_TOKEN
+    if not token:
         log.warning(
-            "Telegram NOT sent to chat_id=%s — TELEGRAM_BOT_TOKEN is not set in .env. "
-            "Create a bot via @BotFather on Telegram and add the token to backend/.env.",
+            "Telegram NOT sent to chat_id=%s — TELEGRAM_BOT_TOKEN is not set. "
+            "Create a bot via @BotFather and add the token to your environment variables.",
             chat_id,
         )
         return False
+
+    api_url = f"https://api.telegram.org/bot{token}/sendMessage"
+
     try:
-        async with httpx.AsyncClient() as client:
+        import asyncio
+        async with httpx.AsyncClient(timeout=15) as client:
             r = await client.post(
-                f"{TELEGRAM_API}/sendMessage",
+                api_url,
                 json={"chat_id": chat_id, "text": text, "parse_mode": parse_mode},
-                timeout=10,
             )
+
             if r.status_code == 200:
-                log.info("Telegram message sent to chat_id=%s", chat_id)
+                log.info("Telegram sent to chat_id=%s", chat_id)
                 return True
+
+            # Rate limited — wait and retry once
+            if r.status_code == 429:
+                retry_after = r.json().get("parameters", {}).get("retry_after", 2)
+                log.warning("Telegram rate-limited (429) — retrying after %ds", retry_after)
+                await asyncio.sleep(retry_after)
+                r2 = await client.post(
+                    api_url,
+                    json={"chat_id": chat_id, "text": text, "parse_mode": parse_mode},
+                )
+                if r2.status_code == 200:
+                    log.info("Telegram sent to chat_id=%s (after retry)", chat_id)
+                    return True
+                log.error("Telegram retry failed %d: %s", r2.status_code, r2.text[:200])
+                return False
+
+            # 400 usually means bad parse_mode HTML — fall back to plain text
+            if r.status_code == 400:
+                log.warning(
+                    "Telegram 400 for chat_id=%s (likely HTML parse error) — "
+                    "retrying as plain text. Error: %s",
+                    chat_id, r.text[:200],
+                )
+                import re as _re
+                plain = _re.sub(r"<[^>]+>", "", text)   # strip HTML tags
+                r3 = await client.post(
+                    api_url,
+                    json={"chat_id": chat_id, "text": plain},  # no parse_mode
+                )
+                if r3.status_code == 200:
+                    log.info("Telegram plain-text fallback sent to chat_id=%s", chat_id)
+                    return True
+                log.error("Telegram plain fallback failed %d: %s", r3.status_code, r3.text[:200])
+                return False
+
             log.error(
-                "Telegram error %d for chat_id=%s: %s — "
-                "Make sure the user has started a conversation with the bot first.",
-                r.status_code, chat_id, r.text,
+                "Telegram error %d for chat_id=%s: %s\n"
+                "Common causes: (1) user hasn't sent /start to the bot, "
+                "(2) bot token is wrong, (3) chat_id is wrong.",
+                r.status_code, chat_id, r.text[:300],
             )
             return False
+
+    except httpx.TimeoutException:
+        log.error("Telegram request timed out for chat_id=%s", chat_id)
+        return False
     except Exception as e:
-        log.error("Telegram failed for chat_id=%s: %s", chat_id, e)
+        log.error("Telegram unexpected error for chat_id=%s: %s", chat_id, e)
         return False
 
 
@@ -393,7 +483,7 @@ def _session_telegram_text(data: dict) -> str:
     for slug, display in skipped:
         lines.append(f"  ⏭ {display}: <i>skipped</i>")
 
-    lines += ["", "Keep practising! 🙏 <a href='https://poseperfect.app'>Open App</a>"]
+    lines += ["", "Keep practising! 🙏 <a href=\"https://poseperfect.app\">Open App</a>"]
     return "\n".join(lines)
 
 
@@ -405,7 +495,7 @@ def _skip_telegram_text(name: str, data: dict) -> str:
         asana_count=data.get("asanaCount", 3),
         duration=data.get("estimatedMinutes", 10),
     )
-    return f"{msg}\n\n<a href='https://poseperfect.app/schedule'>📅 Open Schedule</a>"
+    return f"{msg}\n\n<a href=\"https://poseperfect.app/schedule\">📅 Open Schedule</a>"
 
 
 async def send_session_telegram(chat_id: str, data: dict) -> bool:

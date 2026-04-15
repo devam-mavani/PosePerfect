@@ -476,7 +476,7 @@ async def notify_session(req: NotifySessionRequest):
     results = {}
 
     if req.userEmail:
-        results["email"] = send_session_email(req.userEmail, data)
+        results["email"] = await send_session_email(req.userEmail, data)
     if req.telegramChatId:
         results["telegram"] = await send_session_telegram(req.telegramChatId, data)
 
@@ -494,7 +494,7 @@ async def notify_skip(req: NotifySkipRequest):
     results = {}
 
     if req.userEmail:
-        results["email"] = send_skip_reminder_email(req.userEmail, req.userName, data)
+        results["email"] = await send_skip_reminder_email(req.userEmail, req.userName, data)
     if req.telegramChatId:
         results["telegram"] = await send_skip_reminder_telegram(
             req.telegramChatId, req.userName, data)
