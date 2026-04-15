@@ -2,9 +2,39 @@
  * components/WebcamFeed.jsx
  *
  * Lavender + white webcam feed panel.
+ * Now includes a PoseOverlay canvas for body joint markers.
  */
 
-export default function WebcamFeed({ videoRef, isStreaming, isCapturing, onStart, onStop }) {
+import { useState, useEffect } from 'react'
+import PoseOverlay from './PoseOverlay'
+
+export default function WebcamFeed({ videoRef, isStreaming, isCapturing, onStart, onStop, result }) {
+  // Track actual video dimensions for the overlay canvas
+  const [videoDims, setVideoDims] = useState({ w: 640, h: 480 })
+
+  useEffect(() => {
+    const video = videoRef?.current
+    if (!video) return
+
+    function updateDims() {
+      if (video.videoWidth && video.videoHeight) {
+        setVideoDims({ w: video.videoWidth, h: video.videoHeight })
+      }
+    }
+
+    video.addEventListener('loadedmetadata', updateDims)
+    video.addEventListener('resize', updateDims)
+    // Also check immediately in case already loaded
+    updateDims()
+
+    return () => {
+      video.removeEventListener('loadedmetadata', updateDims)
+      video.removeEventListener('resize', updateDims)
+    }
+  }, [videoRef, isStreaming])
+
+  const landmarks = result?.landmarks || []
+
   return (
     <div className="rounded-2xl overflow-hidden border border-edge bg-white shadow-card flex flex-col">
 
@@ -39,6 +69,15 @@ export default function WebcamFeed({ videoRef, isStreaming, isCapturing, onStart
             isStreaming ? 'opacity-100' : 'opacity-0 absolute',
           ].join(' ')}
         />
+
+        {/* Body marker overlay — only visible when streaming and landmarks exist */}
+        {isStreaming && landmarks.length > 0 && (
+          <PoseOverlay
+            landmarks={landmarks}
+            videoWidth={videoDims.w}
+            videoHeight={videoDims.h}
+          />
+        )}
 
         {!isStreaming && (
           <div className="flex flex-col items-center gap-4 text-ink-faint px-8 py-14 select-none">
@@ -95,3 +134,4 @@ export default function WebcamFeed({ videoRef, isStreaming, isCapturing, onStart
     </div>
   )
 }
+

@@ -72,16 +72,17 @@ export function useSessionStats() {
   }, [])
 
   // ── End session → save to Firestore ──────────────────────────────────────
-  const endSession = useCallback(async () => {
+  // scheduleAccuracies: optional { slug: pct } from the schedule hook —
+  //   when provided these are used as the canonical per-asana accuracy
+  //   (keyed by slug) for the ScoreCard.
+  const endSession = useCallback(async (scheduleAccuracies) => {
     if (!startTimeRef.current) return null
 
     const durationSec = Math.round((Date.now() - startTimeRef.current) / 1000)
     const poseData    = poseDataRef.current
     const poses       = Object.keys(poseData)
 
-    if (poses.length === 0) return null
-
-    // Build per-pose accuracy
+    // Build per-pose frame accuracy (display-name keyed, for Firestore history)
     const poseAccuracy = {}
     let totalCorrect = 0
     let totalFrames  = 0
@@ -93,11 +94,21 @@ export function useSessionStats() {
       totalFrames  += total
     })
 
-    const avgAccuracy = totalFrames > 0 ? Math.round((totalCorrect / totalFrames) * 100) : 0
+    // Use schedule-level slug-keyed accuracies if provided, else fallback
+    const accuracies = scheduleAccuracies && Object.keys(scheduleAccuracies).length > 0
+      ? scheduleAccuracies
+      : poseAccuracy
+
+    // Average from whichever accuracy source we're using
+    const accValues = Object.values(accuracies)
+    const avgAccuracy = accValues.length > 0
+      ? Math.round(accValues.reduce((s, v) => s + v, 0) / accValues.length)
+      : (totalFrames > 0 ? Math.round((totalCorrect / totalFrames) * 100) : 0)
 
     const summary = {
       poses:       poses,
       poseAccuracy,
+      accuracies,
       avgAccuracy,
       durationSec,
       date:        new Date().toISOString(),

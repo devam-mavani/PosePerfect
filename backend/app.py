@@ -206,9 +206,16 @@ DEFAULT_THRESHOLD    = 30
 class JointFeedback(BaseModel):
     name: str; status: str; feedback: str
 
+class JointLandmark(BaseModel):
+    name: str
+    x: float
+    y: float
+    status: str          # "ok" | "fix" | "idle"
+
 class PredictionResult(BaseModel):
     pose: str; confidence: float; posture_status: str
     joints: List[JointFeedback]
+    landmarks: List[JointLandmark] = []
 
 class AsanaInfo(BaseModel):
     slug: str; name: str; description: str
@@ -346,6 +353,22 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"],
 
 
 # ── Joint feedback ────────────────────────────────────────────────────────────
+# Mapping from joint name → MediaPipe PoseLandmark index used to locate the dot
+_JOINT_LANDMARK_INDEX: dict[str, int] = {
+    "Left Wrist":     mp_pose.PoseLandmark.LEFT_WRIST.value,
+    "Right Wrist":    mp_pose.PoseLandmark.RIGHT_WRIST.value,
+    "Left Elbow":     mp_pose.PoseLandmark.LEFT_ELBOW.value,
+    "Right Elbow":    mp_pose.PoseLandmark.RIGHT_ELBOW.value,
+    "Left Shoulder":  mp_pose.PoseLandmark.LEFT_SHOULDER.value,
+    "Right Shoulder": mp_pose.PoseLandmark.RIGHT_SHOULDER.value,
+    "Left Knee":      mp_pose.PoseLandmark.LEFT_KNEE.value,
+    "Right Knee":     mp_pose.PoseLandmark.RIGHT_KNEE.value,
+    "Left Ankle":     mp_pose.PoseLandmark.LEFT_ANKLE.value,
+    "Right Ankle":    mp_pose.PoseLandmark.RIGHT_ANKLE.value,
+    "Left Hip":       mp_pose.PoseLandmark.LEFT_HIP.value,
+    "Right Hip":      mp_pose.PoseLandmark.RIGHT_HIP.value,
+}
+
 def build_joint_feedback(user_angles, teacher, pose_slug):
     thresholds = CORRECTION_THRESHOLDS.get(pose_slug, {})
     joints, correct = [], 0
@@ -362,6 +385,21 @@ def build_joint_feedback(user_angles, teacher, pose_slug):
             joints.append(JointFeedback(name=name, status="fix",
                                         feedback=f"Reduce angle by ~{abs(diff):.0f}°"))
     return joints, correct
+
+
+def build_landmarks(lm, joints):
+    """Build a list of JointLandmark from MediaPipe landmarks + joint feedback."""
+    status_map = {j.name: j.status for j in joints}
+    landmarks = []
+    for name, idx in _JOINT_LANDMARK_INDEX.items():
+        pt = lm[idx]
+        landmarks.append(JointLandmark(
+            name=name,
+            x=round(float(pt.x), 4),
+            y=round(float(pt.y), 4),
+            status=status_map.get(name, "idle"),
+        ))
+    return landmarks
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -512,10 +550,13 @@ async def predict(file: UploadFile = File(...)):
     smoothed_conf = float(proba[classes.index(smoothed)]) if smoothed in classes else confidence
 
     if smoothed_conf < CONFIDENCE_THRESHOLD:
+        idle_joints = [JointFeedback(name=n, status="idle",
+                                     feedback="Hold a recognised pose") for n in JOINT_NAMES]
+        idle_landmarks = build_landmarks(lm, idle_joints)
         return PredictionResult(pose="Unknown Pose", confidence=round(smoothed_conf,4),
             posture_status="unknown",
-            joints=[JointFeedback(name=n, status="idle",
-                                  feedback="Hold a recognised pose") for n in JOINT_NAMES])
+            joints=idle_joints,
+            landmarks=idle_landmarks)
 
     display = DISPLAY_POSE_NAMES.get(smoothed, smoothed.replace("_"," ").title())
     teacher = teacher_angles.get(smoothed)
@@ -527,5 +568,8 @@ async def predict(file: UploadFile = File(...)):
                                 feedback="No teacher reference available") for n in JOINT_NAMES]
         status = "unknown"
 
+    landmarks = build_landmarks(lm, joints)
+
     return PredictionResult(pose=display, confidence=round(smoothed_conf,4),
-                            posture_status=status, joints=joints)
+                            posture_status=status, joints=joints,
+                            landmarks=landmarks)

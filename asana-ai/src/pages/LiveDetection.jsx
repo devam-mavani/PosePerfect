@@ -335,6 +335,7 @@ export default function LiveDetection() {
                 isCapturing={isCapturing}
                 onStart={startCamera}
                 onStop={stopCamera}
+                result={result}
               />
               <SnapshotFlash visible={snapshotTaken} pose={lastSnapshot?.pose} />
             </div>

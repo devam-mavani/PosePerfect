@@ -225,6 +225,23 @@ export function useScheduleSession({ speak, onAsanaComplete }) {
 
   useEffect(() => () => clearTimer(), [])
 
+  // ── Expose accuracy snapshot for early-end scenarios ─────────────────────
+  const getAccuracies = useCallback(() => {
+    const out = {}
+    for (const [slug, data] of Object.entries(accuracyRef.current)) {
+      out[slug] = data.total > 0
+        ? Math.round((data.correct / data.total) * 100)
+        : 0
+    }
+    return out
+  }, [])
+
+  // ── Cleanup: stop all timers + reset phase (used by End Session) ────────
+  const cleanup = useCallback(() => {
+    clearTimer()
+    setPhase('idle')
+  }, [])
+
   const currentSlug  = asanasRef.current[currentAsanaIndex]
   const currentAsana = currentSlug ? {
     slug:       currentSlug,
@@ -237,6 +254,7 @@ export function useScheduleSession({ speak, onAsanaComplete }) {
     previewCountdown, performRemaining, breakRemaining,
     sessionStats, skippedSlugs,
     startSession, skipPreview, skipAsana, onNewResult,
+    getAccuracies, cleanup,
   }
 }
 

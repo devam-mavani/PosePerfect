@@ -261,9 +261,9 @@ export default function SessionPlayer() {
   }, [])
 
   const handleAsanaComplete = useCallback(async (accuracies) => {
-    const summary = await endSession()
+    const summary = await endSession(accuracies)
     if (summary) {
-      setSessionSummary({ ...summary, accuracies })
+      setSessionSummary(summary)
       setSessionStreak(summary.streak)
       await markCompleted()
       setAppPhase('pranayama')
@@ -275,6 +275,7 @@ export default function SessionPlayer() {
     previewCountdown, performRemaining, breakRemaining,
     skippedSlugs,
     startSession, skipPreview, skipAsana, onNewResult: sessionOnResult,
+    getAccuracies, cleanup: cleanupSchedule,
   } = useScheduleSession({ speak, onAsanaComplete: handleAsanaComplete })
 
   // FIX: Must be useRef, not a plain object literal. A plain `{ current: null }`
@@ -324,33 +325,45 @@ export default function SessionPlayer() {
     setShowCard(true)
   }
 
-  // End session early
-  async function handleEndConfirm() {
+  // End session early — non-blocking: show loading state immediately.
+  function handleEndConfirm() {
     setShowEndConfirm(false)
+    // 1. Stop everything synchronously so the UI unblocks
     stopCamera()
+    cleanupSchedule()
+    setSessionStatus('ended')
+    setAppPhase('ending')   // lightweight "ending…" screen while async work runs
 
+    // 2. Grab current accuracies from schedule hook (slug-keyed)
+    const accuracies = getAccuracies()
     const elapsed = sessionStartRef.current
       ? Math.round((Date.now() - sessionStartRef.current) / 1000)
       : 0
 
-    // Save progress so user can resume today
-    await saveProgress({
-      dayName:           day?.dayName,
-      asanas,
-      currentAsanaIndex,
-      completedAsanas:   {}, // scorecard will read from sessionStats
-      skippedAsanas:     [...skippedSlugs],
-      elapsedSec:        elapsed,
-    })
+    // 3. Async Firestore work — runs in background, UI is already responsive
+    ;(async () => {
+      try {
+        await saveProgress({
+          dayName:           day?.dayName,
+          asanas,
+          currentAsanaIndex,
+          completedAsanas:   accuracies,
+          skippedAsanas:     [...skippedSlugs],
+          elapsedSec:        elapsed,
+        })
 
-    const summary = await endSession()
-    if (summary) {
-      setSessionSummary(summary)
-      setSessionStreak(summary.streak)
-    }
-    setSessionStatus('ended')
-    setAppPhase('done')
-    setShowCard(true)
+        const summary = await endSession(accuracies)
+        if (summary) {
+          setSessionSummary(summary)
+          setSessionStreak(summary.streak)
+        }
+      } catch (err) {
+        console.error('handleEndConfirm async error:', err)
+      } finally {
+        setAppPhase('done')
+        setShowCard(true)
+      }
+    })()
   }
 
   const nextAsanaName = asanas[currentAsanaIndex + 1]
@@ -358,12 +371,14 @@ export default function SessionPlayer() {
     : null
 
   // ── Loading / checking ────────────────────────────────────────────────────
-  if (appPhase === 'checking') {
+  if (appPhase === 'checking' || appPhase === 'ending') {
     return (
       <main className="pt-20 min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-9 h-9 rounded-full border-[3px] border-lavender-soft border-t-lavender animate-spin"/>
-          <p className="text-ink-faint text-[0.82rem]">Loading session…</p>
+          <p className="text-ink-faint text-[0.82rem]">
+            {appPhase === 'ending' ? 'Saving session…' : 'Loading session…'}
+          </p>
         </div>
       </main>
     )
@@ -503,7 +518,8 @@ export default function SessionPlayer() {
           <section>
             <div className="relative">
               <WebcamFeed videoRef={videoRef} isStreaming={isStreaming}
-                isCapturing={isCapturing} onStart={startCamera} onStop={stopCamera} />
+                isCapturing={isCapturing} onStart={startCamera} onStop={stopCamera}
+                result={result} />
               {phase === 'break' && <BreakOverlay seconds={breakRemaining} nextAsana={nextAsanaName} />}
               <SnapshotFlash visible={snapshotTaken} />
             </div>
