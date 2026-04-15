@@ -13,6 +13,14 @@ import csv
 import io
 import logging
 import os
+
+# ── Suppress noisy TFLite / absl startup messages ────────────────────────────
+# Must be set BEFORE importing mediapipe / tensorflow
+os.environ.setdefault("GLOG_minloglevel",          "3")   # suppress GLOG (mediapipe)
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL",      "3")   # suppress TF C++ logs
+os.environ.setdefault("ABSL_MIN_LOG_LEVEL",        "3")   # suppress absl logs
+os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS",     "0")   # reduce oneDNN noise
+os.environ.setdefault("MEDIAPIPE_DISABLE_GPU",     "1")   # server has no GPU
 from collections import deque, Counter
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -350,28 +358,50 @@ def load_teacher_angles():
     return {n: np.mean(v, axis=0) for n, v in rows.items()}
 
 
-# ── Boot ──────────────────────────────────────────────────────────────────────
-model, X_train, y_train = train_model()
-teacher_angles          = load_teacher_angles()
+# ── Boot stubs — populated once inside lifespan() ───────────────────────────
+# These are module-level names so all route functions can reference them.
+# They are filled in by lifespan() which runs once in the actual worker process,
+# NOT during module import (which happens twice when uvicorn uses a reloader).
+model: object           = None   # type: ignore[assignment]
+X_train: object         = None   # type: ignore[assignment]
+y_train: object         = None   # type: ignore[assignment]
+teacher_angles: dict    = {}
 _smooth_buf: deque      = deque(maxlen=SMOOTH_WINDOW)
 _cv_cache: Optional[MetricsResult] = None
 
-def get_classes(): return list(model["ensemble"].classes_)
+def get_classes():
+    if model is None:
+        return []
+    return list(model["ensemble"].classes_)
 
 
-# ── Scheduler lifespan ────────────────────────────────────────────────────────
+# ── Scheduler + model lifespan ───────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global model, X_train, y_train, teacher_angles
+
+    # Train model on startup — runs ONCE in the worker process, not in the reloader
+    log.info("[lifespan] Training model…")
+    model, X_train, y_train = train_model()
+    teacher_angles          = load_teacher_angles()
+    log.info("[lifespan] Model ready. Classes: %s", get_classes())
+
+    # Start daily reminder scheduler
     try:
         from scheduler import create_scheduler
         scheduler = create_scheduler()
         scheduler.start()
         log.info("Daily reminder scheduler started.")
-        yield
-        scheduler.shutdown()
     except Exception as e:
         log.warning("Scheduler not started: %s", e)
-        yield
+
+    yield   # ← server is live here
+
+    # Graceful shutdown
+    try:
+        scheduler.shutdown()
+    except Exception:
+        pass
 
 
 # ── FastAPI ───────────────────────────────────────────────────────────────────
