@@ -123,26 +123,21 @@ export default function ScoreCard({ summary, streak, skippedSlugs, dayName, allA
 
   const skippedSet = skippedSlugs instanceof Set ? skippedSlugs : new Set(skippedSlugs || [])
 
-  if (!summary) return null
+  const { accuracies = {}, avgAccuracy = 0, durationSec = 0 } = summary || {}
 
-  const { accuracies = {}, avgAccuracy = 0, durationSec = 0 } = summary
-
-  // Build display rows: completed with accuracy + skipped
-  const completedRows = allAsanas
-    .filter(slug => !skippedSet.has(slug) && accuracies[slug] !== undefined)
-    .map(slug => ({ slug, status: 'done', accuracy: accuracies[slug] ?? 0 }))
-
-  const skippedRows = [...skippedSet].map(slug => ({ slug, status: 'skipped', accuracy: 0 }))
-
-  const allRows = allAsanas.map(slug =>
+  // Build display rows — in order of the original asana list
+  const allRows = (allAsanas || []).map(slug =>
     skippedSet.has(slug)
       ? { slug, status: 'skipped', accuracy: 0 }
       : { slug, status: 'done', accuracy: accuracies[slug] ?? 0 }
   )
 
-  // Send notification once on mount
+  const completedRows = allRows.filter(r => r.status === 'done')
+  const skippedRows   = allRows.filter(r => r.status === 'skipped')
+
+  // Send notification once on mount — after all hooks so the early return below is safe
   useEffect(() => {
-    if (notifSent || !currentUser) return
+    if (notifSent || !currentUser || !summary) return
     setNotifSent(true)
 
     const completedAsanas = completedRows.map(r => [r.slug, getAsanaDisplayName(r.slug)])
@@ -164,7 +159,10 @@ export default function ScoreCard({ summary, streak, skippedSlugs, dayName, allA
         day: 'numeric', month: 'long', year: 'numeric',
       }),
     }).catch(err => console.warn('Notify failed (non-critical):', err))
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Guard: must be AFTER all hooks
+  if (!summary) return null
 
   const handleDownload = useCallback(async () => {
     const { default: html2canvas } = await import('html2canvas')

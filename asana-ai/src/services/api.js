@@ -96,4 +96,26 @@ export async function notifyAdminMessage(data) {
   return result
 }
 
+/**
+ * Upload a pose snapshot (JPEG blob) to the shared Google Drive folder.
+ * Called by useSnapshot.js when accuracy ≥ threshold.
+ *
+ * @param {Blob}   blob      JPEG image blob
+ * @param {string} pose      Detected pose display name (e.g. "Downward Dog")
+ * @param {string} filename  Suggested filename
+ * @returns {{ fileId, viewLink, filename }}
+ */
+export async function uploadSnapshot(blob, pose, filename) {
+  const formData = new FormData()
+  formData.append('file', blob, filename)
+  formData.append('pose', pose)
+  const { data } = await apiClient.post('/upload-snapshot', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    // Snapshot upload can be slow on first request (Drive auth); allow 30s
+    timeout: 30_000,
+  })
+  return data
+}
+
 export default apiClient
+

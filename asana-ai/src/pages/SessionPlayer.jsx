@@ -248,7 +248,7 @@ export default function SessionPlayer() {
   const sessionStartRef = useRef(null)
 
   const { startSession: startStats, endSession, recordResult } = useSessionStats()
-  const { speak, isMuted, toggleMute } = useSpeech()
+  const { speak, isMuted, toggleMute, stopSpeaking } = useSpeech()
   const { saveProgress, markCompleted, loadProgress } = useSessionPersistence()
 
   // ── Check for resumed session on mount ───────────────────────────────────
@@ -329,6 +329,7 @@ export default function SessionPlayer() {
   function handleEndConfirm() {
     setShowEndConfirm(false)
     // 1. Stop everything synchronously so the UI unblocks
+    stopSpeaking()        // cancel any ongoing voice immediately
     stopCamera()
     cleanupSchedule()
     setSessionStatus('ended')
@@ -356,12 +357,15 @@ export default function SessionPlayer() {
         if (summary) {
           setSessionSummary(summary)
           setSessionStreak(summary.streak)
+          setAppPhase('done')
+          setShowCard(true)
+        } else {
+          // No predictions recorded — go straight to schedule
+          navigate('/schedule')
         }
       } catch (err) {
         console.error('handleEndConfirm async error:', err)
-      } finally {
-        setAppPhase('done')
-        setShowCard(true)
+        navigate('/schedule')
       }
     })()
   }

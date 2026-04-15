@@ -127,6 +127,12 @@ export function useSpeech() {
     isHoldingRef.current = false // keep ref in sync immediately
   }, [])
 
+  // Immediately cancel all speech + hold timer (call when camera stops or session ends)
+  const stopSpeaking = useCallback(() => {
+    window.speechSynthesis.cancel()
+    stopHoldTimer()
+  }, [stopHoldTimer])
+
   // Start hold timer
   const startHoldTimer = useCallback(() => {
     stopHoldTimer()
@@ -226,6 +232,7 @@ export function useSpeech() {
     holdCountdown,
     isHolding,
     speak,
+    stopSpeaking,
     onNewResult,
   }
 }

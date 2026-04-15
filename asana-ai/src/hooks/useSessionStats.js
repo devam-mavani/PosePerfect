@@ -99,6 +99,11 @@ export function useSessionStats() {
       ? scheduleAccuracies
       : poseAccuracy
 
+    // If nothing was recorded at all, return a minimal summary (don't write to Firestore)
+    if (poses.length === 0 && Object.keys(accuracies).length === 0) {
+      return { poses: [], poseAccuracy: {}, accuracies: {}, avgAccuracy: 0, durationSec, date: new Date().toISOString() }
+    }
+
     // Average from whichever accuracy source we're using
     const accValues = Object.values(accuracies)
     const avgAccuracy = accValues.length > 0

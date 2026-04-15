@@ -250,6 +250,7 @@ export default function LiveDetection() {
     holdDuration, setHoldDuration,
     holdCountdown, isHolding,
     onNewResult: speechOnResult,
+    stopSpeaking,
   } = useSpeech()
 
   // FIX 4: Must be useRef, not a plain object literal. A plain `{ current: null }`
@@ -284,6 +285,7 @@ export default function LiveDetection() {
   }, [startSession, _startCamera])
 
   const stopCamera = useCallback(async () => {
+    stopSpeaking()    // cancel voice immediately on stop
     _stopCamera()
     const summary = await endSession()
     if (summary) {
@@ -291,7 +293,7 @@ export default function LiveDetection() {
       setSessionStreak(summary.streak)
       setShowCard(true)
     }
-  }, [_stopCamera, endSession])
+  }, [_stopCamera, endSession, stopSpeaking])
 
   return (
     <main className="pt-20 min-h-screen">

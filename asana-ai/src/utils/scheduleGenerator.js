@@ -156,11 +156,11 @@ uttanasana: {
   avoid: ['back_pain'],
 },
 
-baddha_konasana : {
-  name: "Baddha Konasana",
-  difficulty: "beginner",
-  duration: 30,
-  category: "seated",
+baddha_konasana: {
+  name:      'Baddha Konasana',
+  intensity: 'light',
+  goals:     ['relax', 'breathing'],
+  avoid:     ['knee_issues'],
 },
 
   // ── ADD NEW POSES BELOW THIS LINE ─────────────────────────────────────────

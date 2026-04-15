@@ -1,50 +1,44 @@
 /**
  * pages/Home.jsx — Grey & White redesign
+ * Updated: Shows ALL asanas from ASANA_LIBRARY with intensity + goals badges.
+ *          Stats counter updated to reflect actual count.
  */
 
 import { useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
+import { ASANA_LIBRARY } from '../utils/scheduleGenerator'
+
+// ── Derive full pose list from the library ───────────────────────────────────
+const ALL_POSES = Object.entries(ASANA_LIBRARY).map(([slug, info]) => ({
+  slug,
+  name:      info.name,
+  intensity: info.intensity || 'light',
+  goals:     info.goals     || [],
+}))
+
+const TOTAL_POSES = ALL_POSES.length  // always accurate
+
+const INTENSITY_META = {
+  light:    { label: 'Light',    color: '#10B981', bg: '#D1FAE5', dot: '🟢' },
+  moderate: { label: 'Moderate', color: '#7C6FCD', bg: '#EDE9FE', dot: '🟣' },
+  intense:  { label: 'Intense',  color: '#EF4444', bg: '#FEE2E2', dot: '🔴' },
+}
+
+const GOAL_LABELS = {
+  fitness:     'Fitness',
+  balance:     'Balance',
+  relax:       'Relax',
+  weight_loss: 'Weight Loss',
+  breathing:   'Breathing',
+}
 
 const FEATURES = [
-  {
-    icon: '🎯',
-    title: 'Real-Time Detection',
-    desc: 'CNN model analyses your webcam every 3 seconds and identifies your pose with high accuracy.',
-  },
-  {
-    icon: '🗣️',
-    title: 'Voice Guidance',
-    desc: 'Natural language corrections spoken aloud — "lift your left arm slightly upwards" — every 3 seconds.',
-  },
-  {
-    icon: '📅',
-    title: 'Smart Scheduling',
-    desc: 'Personalised weekly plan based on your goal, fitness level, and available practice time.',
-  },
-  {
-    icon: '📸',
-    title: 'Auto Snapshot',
-    desc: 'Captures a photo automatically when your accuracy crosses 85% — perfect form preserved.',
-  },
-  {
-    icon: '📊',
-    title: 'Progress Tracking',
-    desc: 'Streak calendar, mastery badges, and session history all stored in your profile.',
-  },
-  {
-    icon: '📬',
-    title: 'Weekly Reports',
-    desc: 'Every weekend get an email summary of your streak, accuracy, and top poses.',
-  },
-]
-
-const POSES = [
-  'Downward Dog',
-  'Goddess Pose',
-  'Plank',
-  'Tree Pose',
-  'Warrior II',
-  
+  { icon: '🎯', title: 'Real-Time Detection',  desc: 'CNN model analyses your webcam every 3 seconds and identifies your pose with high accuracy.' },
+  { icon: '🗣️', title: 'Voice Guidance',       desc: 'Natural language corrections spoken aloud — "lift your left arm slightly upwards" — every 3 seconds.' },
+  { icon: '📅', title: 'Smart Scheduling',     desc: 'Personalised weekly plan based on your goal, fitness level, and available practice time.' },
+  { icon: '📸', title: 'Auto Snapshot',        desc: 'Captures a photo automatically when your accuracy crosses 85% — perfect form saved to Drive.' },
+  { icon: '📊', title: 'Progress Tracking',    desc: 'Streak calendar, mastery badges for every pose, and session history — all in your profile.' },
+  { icon: '📬', title: 'Weekly Reports',       desc: 'Every weekend get an email summary of your streak, accuracy, and top poses.' },
 ]
 
 // ── Animated counter ──────────────────────────────────────────────────────────
@@ -70,8 +64,71 @@ function Counter({ to, suffix = '' }) {
   return <span ref={ref}>{count}{suffix}</span>
 }
 
+// ── Pose card ─────────────────────────────────────────────────────────────────
+function PoseCard({ name, intensity, goals }) {
+  const meta = INTENSITY_META[intensity] || INTENSITY_META.light
+  return (
+    <div className="bg-white border border-edge rounded-2xl p-5 shadow-card
+                    hover:border-brand hover:shadow-brand-sm hover:-translate-y-0.5
+                    transition-all duration-300 group flex flex-col gap-3">
+      {/* Intensity badge */}
+      <div className="flex items-center justify-between">
+        <span
+          className="text-[0.67rem] font-bold uppercase tracking-[0.1em] px-2.5 py-1 rounded-full"
+          style={{ color: meta.color, background: meta.bg }}
+        >
+          {meta.dot} {meta.label}
+        </span>
+      </div>
+
+      {/* Name */}
+      <p className="font-display font-bold text-[0.9rem] text-ink leading-snug
+                    group-hover:text-brand transition-colors duration-200">
+        {name}
+      </p>
+
+      {/* Goal pills */}
+      {goals.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-auto">
+          {goals.slice(0, 3).map(g => (
+            <span
+              key={g}
+              className="text-[0.62rem] font-semibold bg-surface-mid text-ink-faint
+                         px-2 py-0.5 rounded-full"
+            >
+              {GOAL_LABELS[g] || g}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Intensity filter pill ─────────────────────────────────────────────────────
+function FilterPill({ label, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={[
+        'px-4 py-1.5 rounded-full text-[0.8rem] font-semibold border transition-all duration-200',
+        active
+          ? 'bg-brand text-white border-brand shadow-brand-sm'
+          : 'bg-white text-ink-muted border-edge hover:border-brand hover:text-brand',
+      ].join(' ')}
+    >
+      {label}
+    </button>
+  )
+}
+
 export default function Home() {
   const navigate = useNavigate()
+  const [filter, setFilter] = useState('all')
+
+  const filtered = filter === 'all'
+    ? ALL_POSES
+    : ALL_POSES.filter(p => p.intensity === filter)
 
   return (
     <div className="relative overflow-x-hidden bg-white">
@@ -134,9 +191,9 @@ export default function Home() {
         <div className="max-w-[900px] mx-auto px-6">
           <div className="grid grid-cols-3 gap-4">
             {[
-              { value: 5,  suffix: '',  label: 'Yoga Poses' },
-              { value: 85, suffix: '%', label: 'Snapshot Accuracy' },
-              { value: 3,  suffix: 's', label: 'Detection Interval' },
+              { value: TOTAL_POSES, suffix: '',  label: 'Yoga Asanas' },
+              { value: 85,          suffix: '%', label: 'Snapshot Accuracy' },
+              { value: 3,           suffix: 's', label: 'Detection Interval' },
             ].map((s, i) => (
               <div key={i}
                 className="bg-white border border-edge rounded-2xl p-6 text-center card-hover shadow-card">
@@ -183,24 +240,51 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── POSES ── */}
-      <section className="relative z-10 py-20 px-6 bg-surface-mid">
-        <div className="max-w-[900px] mx-auto text-center">
-          <span className="text-brand text-[0.72rem] font-semibold tracking-[0.15em]
-                           uppercase block mb-3">Model Trained On</span>
-          <h2 className="font-display text-[2rem] font-black text-ink mb-10">
-            6 Yoga Asanas
-          </h2>
-          <div className="flex flex-wrap justify-center gap-3">
-            {POSES.map((pose, i) => (
-              <span key={i}
-                className="bg-white border border-edge text-ink-muted
-                           text-[0.85rem] font-semibold px-5 py-2.5 rounded-full
-                           hover:bg-brand hover:text-white hover:border-brand
-                           transition-all duration-200 cursor-default shadow-card">
-                {pose}
-              </span>
+      {/* ── ALL ASANAS ── */}
+      <section className="relative z-10 py-24 px-6 bg-surface-mid">
+        <div className="max-w-[1200px] mx-auto">
+
+          {/* Header */}
+          <div className="text-center mb-12">
+            <span className="text-brand text-[0.72rem] font-semibold tracking-[0.15em]
+                             uppercase block mb-3">Our Library</span>
+            <h2 className="font-display text-[2.2rem] font-black text-ink mb-3">
+              {TOTAL_POSES} Yoga Asanas
+            </h2>
+            <p className="text-ink-muted text-[0.9rem] max-w-[480px] mx-auto leading-relaxed">
+              From beginner-friendly resting poses to intense inversions — a full range
+              for every goal, level, and condition.
+            </p>
+          </div>
+
+          {/* Intensity filter */}
+          <div className="flex flex-wrap justify-center gap-2 mb-10">
+            {[
+              { key: 'all',      label: `All (${TOTAL_POSES})` },
+              { key: 'light',    label: `🟢 Light (${ALL_POSES.filter(p => p.intensity === 'light').length})` },
+              { key: 'moderate', label: `🟣 Moderate (${ALL_POSES.filter(p => p.intensity === 'moderate').length})` },
+              { key: 'intense',  label: `🔴 Intense (${ALL_POSES.filter(p => p.intensity === 'intense').length})` },
+            ].map(f => (
+              <FilterPill key={f.key} label={f.label} active={filter === f.key}
+                onClick={() => setFilter(f.key)} />
             ))}
+          </div>
+
+          {/* Pose grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {filtered.map(p => (
+              <PoseCard key={p.slug} name={p.name} intensity={p.intensity} goals={p.goals} />
+            ))}
+          </div>
+
+          {/* CTA inside section */}
+          <div className="text-center mt-12">
+            <button
+              onClick={() => navigate('/schedule')}
+              className="btn-brand-shimmer px-8 py-3.5 text-[0.95rem] font-display font-bold
+                         shadow-brand-lg hover:-translate-y-0.5 transition-transform duration-200">
+              Get My Personalised Plan →
+            </button>
           </div>
         </div>
       </section>

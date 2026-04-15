@@ -10,7 +10,9 @@ All existing endpoints unchanged.
 """
 
 import csv
+import io
 import logging
+import os
 from collections import deque, Counter
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -41,6 +43,32 @@ log = logging.getLogger("asana-ai")
 BASE_DIR    = Path(__file__).parent
 TRAIN_CSV   = BASE_DIR / "train_angle.csv"
 TEACHER_CSV = BASE_DIR / "teacher_yoga" / "angle_teacher_yoga.csv"
+
+# ── Google Drive config ───────────────────────────────────────────────────────
+DRIVE_FOLDER_ID  = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "1Y75P0Sz0eG8bNhiV3SAwjJhIsSciOPxH")
+SERVICE_ACCT_PATH = os.getenv("GOOGLE_SERVICE_ACCOUNT_PATH",
+                               os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", "./serviceAccountKey.json"))
+
+_drive_service = None   # lazy singleton
+
+def get_drive_service():
+    """Build and cache an authenticated Google Drive v3 service."""
+    global _drive_service
+    if _drive_service is not None:
+        return _drive_service
+    try:
+        from google.oauth2 import service_account
+        from googleapiclient.discovery import build
+        scopes = ["https://www.googleapis.com/auth/drive.file"]
+        creds  = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCT_PATH, scopes=scopes
+        )
+        _drive_service = build("drive", "v3", credentials=creds, cache_discovery=False)
+        log.info("Google Drive service initialised.")
+    except Exception as exc:
+        log.warning("Google Drive service unavailable: %s", exc)
+        _drive_service = None
+    return _drive_service
 
 # ── MediaPipe ─────────────────────────────────────────────────────────────────
 mp_pose    = mp.solutions.pose
@@ -520,6 +548,59 @@ async def notify_admin_message(req: AdminMessageRequest):
         )
 
     return {"sent": results}
+
+
+# ── Snapshot upload → Google Drive ────────────────────────────────────────────
+@app.post("/upload-snapshot")
+async def upload_snapshot(
+    file: UploadFile = File(...),
+    pose: str = "pose",
+):
+    """
+    Receive a JPEG snapshot from the frontend and upload it to the shared
+    Google Drive folder.  Returns {"viewLink": "...", "fileId": "..."}.
+
+    Requires the service account email to have Editor access on the folder:
+      Settings → Share and set the service account email as Editor.
+    """
+    drive = get_drive_service()
+    if drive is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Google Drive service unavailable — check GOOGLE_SERVICE_ACCOUNT_PATH env var."
+        )
+
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Empty file received.")
+
+    from googleapiclient.http import MediaIoBaseUpload
+
+    # Build a sanitised filename: Downward_Dog_2026-04-15_14-30-00.jpg
+    filename = f"{pose.replace(' ', '_')}_{file.filename or 'snapshot.jpg'}"
+
+    file_metadata = {
+        "name":    filename,
+        "parents": [DRIVE_FOLDER_ID],
+    }
+    media = MediaIoBaseUpload(
+        io.BytesIO(raw),
+        mimetype="image/jpeg",
+        resumable=False,
+    )
+
+    try:
+        created = drive.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields="id,webViewLink",
+        ).execute()
+    except Exception as exc:
+        log.error("Drive upload failed: %s", exc)
+        raise HTTPException(status_code=502, detail=f"Drive upload failed: {exc}")
+
+    log.info("Snapshot uploaded: %s → %s", filename, created.get("webViewLink"))
+    return {"fileId": created["id"], "viewLink": created["webViewLink"], "filename": filename}
 
 
 
