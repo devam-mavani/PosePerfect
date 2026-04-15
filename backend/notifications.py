@@ -328,8 +328,8 @@ async def send_skip_reminder_email(to: str, name: str, data: dict) -> bool:
 
 
 # ── Admin custom message ──────────────────────────────────────────────────────
-def send_admin_email(to: str, name: str, subject: str, message: str) -> bool:
-    """Send a free-form admin message via email."""
+async def send_admin_email(to: str, name: str, subject: str, message: str) -> bool:
+    """Send a free-form admin message via email (non-blocking via thread pool)."""
     html = f"""
 <!DOCTYPE html><html>
 <body style="font-family:Arial,sans-serif;background:#F9FAFB;padding:40px 20px;">
@@ -359,7 +359,7 @@ def send_admin_email(to: str, name: str, subject: str, message: str) -> bool:
     </tr>
   </table>
 </body></html>"""
-    return send_email(to, subject, html)
+    return await send_email_async(to, subject, html)
 
 
 async def send_admin_telegram(chat_id: str, name: str, message: str) -> bool:

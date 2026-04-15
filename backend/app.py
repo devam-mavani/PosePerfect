@@ -564,7 +564,7 @@ async def notify_admin_message(req: AdminMessageRequest):
     results = {}
 
     if req.userEmail:
-        results["email"] = send_admin_email(
+        results["email"] = await send_admin_email(
             req.userEmail,
             req.userName,
             req.subject or "Message from PosePerfect",
