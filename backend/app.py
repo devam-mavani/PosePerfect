@@ -75,6 +75,7 @@ DISPLAY_POSE_NAMES: dict[str, str] = {
     "sarvangasana": "Sarvangasana",
     "ustrasana": "Ustrasana",
     "uttanasana": "Uttanasana",
+    "baddha_konasana": "Baddha Konasana",
 }
 
 POSE_DESCRIPTIONS: dict[str, str] = {
@@ -97,6 +98,7 @@ POSE_DESCRIPTIONS: dict[str, str] = {
     "sarvangasana": "Shoulder stand that improves circulation and strengthens the body.",
     "ustrasana": "Camel pose that stretches chest and strengthens the back.",
     "uttanasana": "Standing forward bend that stretches hamstrings and calms the mind.",
+    "baddha_konasana": "Sit upright, bring the soles of your feet together, hold your feet, and gently press your knees towards the ground while keeping your spine straight.",
 }
 
 CORRECTION_THRESHOLDS: dict[str, dict[str, float]] = {
@@ -181,6 +183,12 @@ CORRECTION_THRESHOLDS: dict[str, dict[str, float]] = {
     "Left Knee": 30, "Right Knee": 30,
     "Left Hip": 30, "Right Hip": 30
 },
+"baddha_konasana": {
+        "left_knee_angle": (40, 120),   # knees bent outward
+        "right_knee_angle": (40, 120),
+        "hip_angle": (70, 140),         # open hips
+        "spine_angle": (160, 200),      # upright back
+    }
 }
 # ══════════════════════════════════════════════════════════════════════════════
 

@@ -40,6 +40,7 @@ export const SUPPORTED_POSES = [
   'sarvangasana',
   'ustrasana',
   'uttanasana',
+  "baddha_konasana",
 ]
 
 export const API_BASE_URL =

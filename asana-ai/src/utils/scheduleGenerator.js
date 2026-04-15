@@ -156,6 +156,13 @@ uttanasana: {
   avoid: ['back_pain'],
 },
 
+baddha_konasana : {
+  name: "Baddha Konasana",
+  difficulty: "beginner",
+  duration: 30,
+  category: "seated",
+},
+
   // ── ADD NEW POSES BELOW THIS LINE ─────────────────────────────────────────
   // bhujangasana: {
   //   name: 'Cobra Pose',
