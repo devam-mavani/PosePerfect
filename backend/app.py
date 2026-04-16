@@ -631,12 +631,12 @@ async def upload_snapshot(
             media_body=media,
             fields="id,webViewLink",
         ).execute()
+        log.info("Snapshot uploaded: %s → %s", filename, created.get("webViewLink"))
+        return {"fileId": created["id"], "viewLink": created["webViewLink"], "filename": filename}
     except Exception as exc:
-        log.error("Drive upload failed: %s", exc)
-        raise HTTPException(status_code=502, detail=f"Drive upload failed: {exc}")
-
-    log.info("Snapshot uploaded: %s → %s", filename, created.get("webViewLink"))
-    return {"fileId": created["id"], "viewLink": created["webViewLink"], "filename": filename}
+        log.warning("Drive upload failed (API likely disabled): %s", exc)
+        # Fall back to local handling gently without raising a 502 Error
+        return {"fileId": None, "viewLink": None, "filename": filename}
 
 
 

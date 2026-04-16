@@ -278,8 +278,7 @@ def send_email(to: str, subject: str, html_body: str) -> bool:
 async def send_email_async(to: str, subject: str, html_body: str):
     """Async wrapper — returns (success, reason). Runs in a thread."""
     import asyncio
-
-
+    return await asyncio.to_thread(_send_email_sync, to, subject, html_body)
 
 
 async def send_session_email(to: str, data: dict):
