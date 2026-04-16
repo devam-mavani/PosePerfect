@@ -188,6 +188,17 @@ def _scorecard_html(data: dict) -> str:
         <tr>
           <td style="padding:20px 36px 32px;border-top:1px solid #F3F4F6;">
            <p style="margin:0;font-size:13px;color:#9CA3AF;text-align:center;">
+             PosePerfect · <a href="https://poseperfect.app" style="color:#7C6FCD;">Open App</a>
+           </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
+"""
+
 def _send_via_resend(to: str, subject: str, html_body: str, from_email: str):
     """
     Send via Resend HTTP API (works on Render free tier).
