@@ -608,10 +608,11 @@ function MessagesTab({ users, result, setResult }) {
         // Determine actual delivery status from the response, not just HTTP status
         const emailOk    = mode !== 'telegram' ? res.sent?.email    === true : null
         const telegramOk = mode !== 'email'    ? res.sent?.telegram === true : null
+        const emailError = res.sent?.emailError ?? null   // ← new: specific failure reason
 
         const channels = []
         if (emailOk    === true)  channels.push('📧 email ✓')
-        if (emailOk    === false) channels.push('📧 email ✗')
+        if (emailOk    === false) channels.push(`📧 email ✗${emailError ? ` — ${emailError}` : ''}`)
         if (telegramOk === true)  channels.push('✈️ telegram ✓')
         if (telegramOk === false) channels.push('✈️ telegram ✗')
 

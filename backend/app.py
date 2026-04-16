@@ -506,7 +506,9 @@ async def notify_session(req: NotifySessionRequest):
     results = {}
 
     if req.userEmail:
-        results["email"] = await send_session_email(req.userEmail, data)
+        email_ok, email_err = await send_session_email(req.userEmail, data)
+        results["email"]      = email_ok
+        if email_err: results["emailError"] = email_err
     if req.telegramChatId:
         results["telegram"] = await send_session_telegram(req.telegramChatId, data)
 
@@ -524,7 +526,9 @@ async def notify_skip(req: NotifySkipRequest):
     results = {}
 
     if req.userEmail:
-        results["email"] = await send_skip_reminder_email(req.userEmail, req.userName, data)
+        email_ok, email_err = await send_skip_reminder_email(req.userEmail, req.userName, data)
+        results["email"]      = email_ok
+        if email_err: results["emailError"] = email_err
     if req.telegramChatId:
         results["telegram"] = await send_skip_reminder_telegram(
             req.telegramChatId, req.userName, data)
@@ -564,12 +568,14 @@ async def notify_admin_message(req: AdminMessageRequest):
     results = {}
 
     if req.userEmail:
-        results["email"] = await send_admin_email(
+        email_ok, email_err = await send_admin_email(
             req.userEmail,
             req.userName,
             req.subject or "Message from PosePerfect",
             req.customMessage,
         )
+        results["email"]      = email_ok
+        if email_err: results["emailError"] = email_err
     if req.telegramChatId:
         results["telegram"] = await send_admin_telegram(
             req.telegramChatId,

@@ -36,6 +36,12 @@ load_dotenv()
 log = logging.getLogger("asana-ai.notifications")
 
 # ── Config ────────────────────────────────────────────────────────────────────
+# Resend (HTTP email API — works on Render free tier)
+# Sign up free at https://resend.com → get API key → verify your sender email
+RESEND_API_KEY    = os.getenv("RESEND_API_KEY",    "")
+RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "")   # e.g. noreply@yourdomain.com
+
+# SMTP fallback (works locally, BLOCKED on Render free tier)
 SMTP_HOST      = os.getenv("SMTP_HOST",      "smtp.gmail.com")
 SMTP_PORT      = int(os.getenv("SMTP_PORT",  "587"))
 SMTP_USER      = os.getenv("SMTP_USER",      "")
@@ -181,100 +187,102 @@ def _scorecard_html(data: dict) -> str:
         </tr>
         <tr>
           <td style="padding:20px 36px 32px;border-top:1px solid #F3F4F6;">
-            <p style="margin:0;font-size:13px;color:#9CA3AF;text-align:center;">
-              Keep practising · <a href="https://poseperfect.app"
-              style="color:#7C6FCD;text-decoration:none;">PosePerfect</a>
-            </p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>"""
-
-
-# ── Email ─────────────────────────────────────────────────────────────────────
-def _send_email_sync(to: str, subject: str, html_body: str) -> bool:
+           <p style="margin:0;font-size:13px;color:#9CA3AF;text-align:center;">
+def _send_via_resend(to: str, subject: str, html_body: str, from_email: str):
     """
-    Blocking SMTP send — call via asyncio.to_thread() from async contexts.
-    Tries STARTTLS on port 587 first; falls back to SSL on port 465 if the
-    env var SMTP_PORT is 465.
+    Send via Resend HTTP API (works on Render free tier).
+    Returns (True, None) on success, (False, reason) on failure.
+    """
+    try:
+        import resend as _resend
+        _resend.api_key = RESEND_API_KEY
+        resp = _resend.Emails.send({
+            "from":    from_email,
+            "to":      [to],
+            "subject": subject,
+            "html":    html_body,
+        })
+        # Resend returns {"id": "..."} on success
+        if getattr(resp, "id", None) or (isinstance(resp, dict) and resp.get("id")):
+            log.info("[Resend] Email sent to %s (id=%s)", to, getattr(resp, 'id', resp.get('id')))
+            return True, None
+        reason = f"Resend returned unexpected response: {resp}"
+        log.error(reason)
+        return False, reason
+    except Exception as e:
+        reason = f"Resend error: {e}"
+        log.error("[Resend] Failed for %s: %s", to, reason)
+        return False, reason
+
+
+def _send_via_smtp(to: str, subject: str, html_body: str):
+    """
+    Send via SMTP (works locally, blocked on Render free tier).
+    Returns (True, None) on success, (False, reason) on failure.
     """
     if not SMTP_USER or not SMTP_PASS:
-        log.warning(
-            "Email NOT sent to %s — SMTP_USER/SMTP_PASS are not set. "
-            "Add your Gmail App Password to backend/.env  "
-            "(Google Account → Security → 2-Step Verification → App passwords).",
-            to,
-        )
-        return False
+        return False, "SMTP_USER/SMTP_PASS not configured."
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"]    = f"{SMTP_FROM_NAME} <{SMTP_USER}>"
     msg["To"]      = to
     msg.attach(MIMEText(html_body, "html"))
-
-    timeout = 10  # seconds — prevents silent hang on Render
-
     try:
         if SMTP_PORT == 465:
-            # SSL from the start (some providers require this)
             import ssl as _ssl
             ctx = _ssl.create_default_context()
-            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=timeout, context=ctx) as server:
-                server.login(SMTP_USER, SMTP_PASS)
-                server.sendmail(SMTP_USER, to, msg.as_string())
+            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=10, context=ctx) as s:
+                s.login(SMTP_USER, SMTP_PASS)
+                s.sendmail(SMTP_USER, to, msg.as_string())
         else:
-            # Standard STARTTLS on port 587 (Gmail default)
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=timeout) as server:
-                server.ehlo()
-                server.starttls()
-                server.ehlo()
-                server.login(SMTP_USER, SMTP_PASS)
-                server.sendmail(SMTP_USER, to, msg.as_string())
-
-        log.info("Email sent to %s — subject: %s", to, subject)
-        return True
-
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as s:
+                s.ehlo(); s.starttls(); s.ehlo()
+                s.login(SMTP_USER, SMTP_PASS)
+                s.sendmail(SMTP_USER, to, msg.as_string())
+        log.info("[SMTP] Email sent to %s", to)
+        return True, None
     except smtplib.SMTPAuthenticationError:
-        log.error(
-            "SMTP authentication failed for %s — "
-            "SMTP_PASS must be a Gmail App Password (16 chars, no spaces), "
-            "NOT your regular Gmail password. "
-            "Generate one at: Google Account → Security → 2-Step Verification → App passwords. "
-            "Also make sure 2-Step Verification is ON for %s.",
-            to, SMTP_USER,
-        )
-        return False
-    except smtplib.SMTPRecipientsRefused:
-        log.error("SMTP rejected recipient address: %s", to)
-        return False
+        return False, "SMTP auth failed — use a Gmail App Password, not your regular password."
     except (TimeoutError, smtplib.SMTPConnectError, OSError) as e:
-        log.error("SMTP connection failed (host=%s port=%d): %s", SMTP_HOST, SMTP_PORT, e)
-        return False
-    except smtplib.SMTPException as e:
-        log.error("SMTP error sending to %s: %s", to, e)
-        return False
+        return False, f"SMTP connection failed: {e} (port {SMTP_PORT} may be blocked by your host)"
     except Exception as e:
-        log.error("Unexpected email error for %s: %s", to, e)
-        return False
+        return False, f"SMTP error: {e}"
+
+
+def _send_email_sync(to: str, subject: str, html_body: str):
+    """
+    Send an HTML email.
+    Strategy: Resend (HTTP API) first — works on Render.
+              Falls back to SMTP if RESEND_API_KEY is not set (local dev).
+    Returns (True, None) | (False, reason_string).
+    """
+    if RESEND_API_KEY:
+        from_addr = RESEND_FROM_EMAIL or f"PosePerfect <onboarding@resend.dev>"
+        return _send_via_resend(to, subject, html_body, from_addr)
+
+    # Fallback: SMTP (local dev only — Render blocks port 587)
+    log.warning(
+        "RESEND_API_KEY not set — falling back to SMTP. "
+        "On Render, set RESEND_API_KEY to send emails (SMTP port 587 is blocked)."
+    )
+    return _send_via_smtp(to, subject, html_body)
 
 
 def send_email(to: str, subject: str, html_body: str) -> bool:
-    """Synchronous wrapper — kept for direct (non-async) callers."""
-    return _send_email_sync(to, subject, html_body)
+    """Synchronous wrapper — returns True/False (discards reason)."""
+    ok, _ = _send_email_sync(to, subject, html_body)
+    return ok
 
 
-async def send_email_async(to: str, subject: str, html_body: str) -> bool:
-    """Async-safe wrapper — runs SMTP in a thread so the event loop never blocks."""
+async def send_email_async(to: str, subject: str, html_body: str):
+    """Async wrapper — returns (success, reason). Runs in a thread."""
     import asyncio
-    return await asyncio.to_thread(_send_email_sync, to, subject, html_body)
 
 
 
-async def send_session_email(to: str, data: dict) -> bool:
+
+async def send_session_email(to: str, data: dict):
     name    = data.get("userName", "Yogi")
     status  = data.get("status", "completed")
     subject = (

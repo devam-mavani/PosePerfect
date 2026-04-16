@@ -27,10 +27,9 @@ joblib==1.4.2
 # NOTE: tensorflow has been removed — it was never used in app.py and caused
 # build timeouts (~600 MB install) on Render's free tier.
 
-# Firebase + email (only needed if scheduler/email reporting is active)
-# Uncomment these if you are using the daily reminder scheduler with Firestore:
-# firebase-admin==6.5.0
-# sendgrid==6.11.0
+# Email via HTTP API (works on Render free tier — SMTP port 587 is blocked)
+resend==2.3.0
+# sendgrid==6.11.0  # alternative if you prefer SendGrid
 
 # Google Drive API — for uploading pose snapshots
 google-api-python-client==2.131.0
