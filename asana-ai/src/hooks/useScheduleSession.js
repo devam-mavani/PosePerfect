@@ -91,6 +91,7 @@ export function useScheduleSession({ speak, onAsanaComplete }) {
     const name  = getAsanaDisplayName(asana)
     setPerformRemaining(dur)
     speak(`Now perform ${name}. I will guide you.`, true)
+    lastSpeakRef.current = Date.now()
     let rem = dur
     timerRef.current = setInterval(() => {
       rem -= 1
@@ -186,7 +187,7 @@ export function useScheduleSession({ speak, onAsanaComplete }) {
       result.pose.toLowerCase() !== expectedName.toLowerCase()
     ) {
       const now = Date.now()
-      if (now - lastWrongAsanaSpeakRef.current > 12000) {
+      if (now - lastWrongAsanaSpeakRef.current > 5000) {
         lastWrongAsanaSpeakRef.current = now
         speak(
           `You are performing a different asana. Please switch to ${expectedName}.`,
@@ -205,7 +206,7 @@ export function useScheduleSession({ speak, onAsanaComplete }) {
     }
 
     const now = Date.now()
-    if (now - lastSpeakRef.current < 8000) return
+    if (now - lastSpeakRef.current < 3000) return
     lastSpeakRef.current = now
 
     if (result.posture_status === 'wrong' && result.joints) {
